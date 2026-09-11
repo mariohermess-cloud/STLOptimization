@@ -9,8 +9,10 @@ Conventions used throughout the application
 * Consequently the build direction expressed **in the part frame** is
   ``d = R.T @ [0, 0, 1]``. Every anisotropy and overhang calculation is done
   with ``d`` in the part frame, which avoids rotating the mesh itself.
-* Reported Euler angles are intrinsic ``X -> Y -> Z`` ("xyz" in SciPy terms),
-  in degrees, matching the rotation fields of the export schema.
+* Reported Euler angles are intrinsic ``X -> Y -> Z`` (SciPy ``"XYZ"``), in
+  degrees. The composed matrix is ``R = Rx @ Ry @ Rz``, which is exactly what
+  three.js applies for ``Euler(x, y, z, 'XYZ')``, so an exported orientation
+  can be applied in the viewer and in a slicer without re-deriving it.
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ Z_AXIS = np.array([0.0, 0.0, 1.0])
 
 def rotation_from_euler_xyz(rx: float, ry: float, rz: float) -> np.ndarray:
     """Rotation matrix from intrinsic X-Y-Z Euler angles given in degrees."""
-    return Rotation.from_euler("xyz", [rx, ry, rz], degrees=True).as_matrix()
+    return Rotation.from_euler("XYZ", [rx, ry, rz], degrees=True).as_matrix()
 
 
 def euler_xyz_from_rotation(matrix: np.ndarray) -> tuple[float, float, float]:
@@ -35,7 +37,7 @@ def euler_xyz_from_rotation(matrix: np.ndarray) -> tuple[float, float, float]:
         # angle is redundant, and any of the equivalent triples describes the
         # same orientation.
         warnings.simplefilter("ignore", UserWarning)
-        rx, ry, rz = Rotation.from_matrix(matrix).as_euler("xyz", degrees=True)
+        rx, ry, rz = Rotation.from_matrix(matrix).as_euler("XYZ", degrees=True)
     return float(rx), float(ry), float(rz)
 
 

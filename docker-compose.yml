@@ -1,0 +1,37 @@
+name: print-engineering-optimizer
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    image: print-engineering-optimizer-backend
+    environment:
+      PEO_LOG_LEVEL: INFO
+      PEO_STORAGE_DIR: /data/uploads
+      # Raise for very large parts; the container needs RAM to match.
+      PEO_MAX_UPLOAD_BYTES: "157286400"
+      PEO_ANALYSIS_FACE_BUDGET: "60000"
+      PEO_OPTIMIZER_WORKERS: "4"
+    volumes:
+      - uploads:/data/uploads
+    restart: unless-stopped
+    # The API is reached through the frontend's /api proxy. Publish it only if
+    # you want to call the API or open /docs directly.
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    image: print-engineering-optimizer-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  uploads:
