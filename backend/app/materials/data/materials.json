@@ -1,0 +1,270 @@
+{
+  "schema_version": 2,
+  "units": {
+    "density": "g/cm^3",
+    "young_modulus": "MPa",
+    "tensile_strength": "MPa",
+    "thermal_limit": "degC",
+    "layer_height": "mm",
+    "max_volumetric_flow": "mm^3/s"
+  },
+  "disclaimer": "Values are representative figures for FDM filaments compiled from public vendor technical data sheets and polymer literature. Filament brands vary widely. Every property carries an explicit range and a confidence level. Verify against the technical data sheet of the spool you actually print. See docs/materials.md.",
+  "materials": [
+    {
+      "id": "pla",
+      "name": "PLA",
+      "family": "PLA",
+      "fiber_filled": false,
+      "requires_enclosure": false,
+      "properties": {
+        "density": {"value": 1.24, "min": 1.17, "max": 1.27, "confidence": "high", "source": "Vendor TDS / polymer handbooks (PLA resin density)"},
+        "young_modulus": {"value": 3200, "min": 2300, "max": 3900, "confidence": "medium", "source": "Vendor TDS, XY tensile modulus of printed specimens"},
+        "tensile_strength": {"value": 50, "min": 40, "max": 65, "confidence": "medium", "source": "Vendor TDS, XY printed tensile strength"},
+        "layer_adhesion_factor": {"value": 0.55, "min": 0.35, "max": 0.75, "confidence": "low", "source": "HEURISTIC. Z/XY tensile strength ratio reported in FDM anisotropy literature; strongly dependent on nozzle temperature, cooling and layer height."},
+        "thermal_limit": {"value": 55, "min": 50, "max": 60, "confidence": "high", "source": "Glass transition of PLA (~60 degC); usable load limit is below Tg", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 21, "min": 12, "max": 25, "confidence": "medium", "source": "Bambu Lab X1C published flow figures for PLA with 0.4 mm hotend"},
+        "warp_tendency": {"value": 0.15, "min": 0.05, "max": 0.3, "confidence": "low", "source": "HEURISTIC index (0 = no warping observed in practice, 1 = severe). Ordering follows mould shrinkage and Tg, not a measured property."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.08, "max": 0.28, "note": "For a 0.4 mm nozzle. Scaled by nozzle diameter at runtime."},
+        "recommended_wall_count": {"value": 3, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.20, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 190, "max": 230},
+        "bed_temp_c": {"min": 35, "max": 60}
+      }
+    },
+    {
+      "id": "pla-cf",
+      "name": "PLA-CF",
+      "family": "PLA",
+      "fiber_filled": true,
+      "requires_enclosure": false,
+      "properties": {
+        "density": {"value": 1.22, "min": 1.15, "max": 1.30, "confidence": "medium", "source": "Vendor TDS for carbon-fibre filled PLA"},
+        "young_modulus": {"value": 5000, "min": 3500, "max": 8000, "confidence": "low", "source": "Vendor TDS. Short-fibre reinforcement raises stiffness substantially; the spread between brands is large."},
+        "tensile_strength": {"value": 48, "min": 35, "max": 65, "confidence": "low", "source": "Vendor TDS. Chopped fibre raises modulus but does not reliably raise tensile strength."},
+        "layer_adhesion_factor": {"value": 0.40, "min": 0.25, "max": 0.55, "confidence": "low", "source": "HEURISTIC. Fibres align with the extrusion direction, so reinforcement is in XY only; Z relies on the matrix, lowering the Z/XY ratio relative to unfilled PLA."},
+        "thermal_limit": {"value": 55, "min": 50, "max": 60, "confidence": "medium", "source": "Matrix Tg governs; fibre does not raise Tg", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 16, "min": 8, "max": 20, "confidence": "low", "source": "Filled filaments are typically run slower than unfilled PLA"},
+        "warp_tendency": {"value": 0.12, "min": 0.05, "max": 0.25, "confidence": "low", "source": "HEURISTIC index. Fibre filling reduces shrinkage."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28, "note": "Abrasive: hardened nozzle required."},
+        "recommended_wall_count": {"value": 3, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.20, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 210, "max": 240},
+        "bed_temp_c": {"min": 35, "max": 60}
+      }
+    },
+    {
+      "id": "petg",
+      "name": "PETG",
+      "family": "PETG",
+      "fiber_filled": false,
+      "requires_enclosure": false,
+      "properties": {
+        "density": {"value": 1.27, "min": 1.23, "max": 1.30, "confidence": "high", "source": "PETG resin density, vendor TDS"},
+        "young_modulus": {"value": 1900, "min": 1500, "max": 2300, "confidence": "medium", "source": "Vendor TDS, XY tensile modulus"},
+        "tensile_strength": {"value": 48, "min": 40, "max": 55, "confidence": "medium", "source": "Vendor TDS, XY printed tensile strength"},
+        "layer_adhesion_factor": {"value": 0.70, "min": 0.55, "max": 0.85, "confidence": "low", "source": "HEURISTIC. PETG is consistently reported as one of the better-bonding common filaments; slow cooling favours interlayer diffusion."},
+        "thermal_limit": {"value": 70, "min": 65, "max": 80, "confidence": "medium", "source": "PETG Tg is around 80 degC; load-bearing limit taken below it", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 14, "min": 8, "max": 18, "confidence": "medium", "source": "Typical X1C PETG flow limits"},
+        "warp_tendency": {"value": 0.25, "min": 0.1, "max": 0.4, "confidence": "low", "source": "HEURISTIC index. Low shrinkage, but poor first-layer adhesion control can lift corners."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28},
+        "recommended_wall_count": {"value": 3, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.20, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 230, "max": 260},
+        "bed_temp_c": {"min": 60, "max": 80}
+      }
+    },
+    {
+      "id": "petg-cf",
+      "name": "PETG-CF",
+      "family": "PETG",
+      "fiber_filled": true,
+      "requires_enclosure": false,
+      "properties": {
+        "density": {"value": 1.30, "min": 1.22, "max": 1.38, "confidence": "low", "source": "Vendor TDS for carbon-fibre filled PETG"},
+        "young_modulus": {"value": 4000, "min": 2800, "max": 6500, "confidence": "low", "source": "Vendor TDS; large spread between brands"},
+        "tensile_strength": {"value": 52, "min": 40, "max": 65, "confidence": "low", "source": "Vendor TDS"},
+        "layer_adhesion_factor": {"value": 0.50, "min": 0.35, "max": 0.65, "confidence": "low", "source": "HEURISTIC. Fibre reinforcement acts in XY only, lowering the Z/XY ratio relative to unfilled PETG."},
+        "thermal_limit": {"value": 72, "min": 65, "max": 80, "confidence": "low", "source": "Matrix Tg governs", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 12, "min": 6, "max": 16, "confidence": "low", "source": "Filled filament, run slower than unfilled PETG"},
+        "warp_tendency": {"value": 0.2, "min": 0.1, "max": 0.35, "confidence": "low", "source": "HEURISTIC index"}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28, "note": "Abrasive: hardened nozzle required."},
+        "recommended_wall_count": {"value": 4, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.25, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 240, "max": 270},
+        "bed_temp_c": {"min": 60, "max": 80}
+      }
+    },
+    {
+      "id": "abs",
+      "name": "ABS",
+      "family": "ABS",
+      "fiber_filled": false,
+      "requires_enclosure": true,
+      "properties": {
+        "density": {"value": 1.05, "min": 1.02, "max": 1.08, "confidence": "high", "source": "ABS resin density"},
+        "young_modulus": {"value": 2000, "min": 1600, "max": 2500, "confidence": "medium", "source": "Vendor TDS, XY tensile modulus"},
+        "tensile_strength": {"value": 38, "min": 30, "max": 45, "confidence": "medium", "source": "Vendor TDS, XY printed tensile strength"},
+        "layer_adhesion_factor": {"value": 0.55, "min": 0.35, "max": 0.75, "confidence": "low", "source": "HEURISTIC. Amorphous and solvent-weldable, so bonding is good when printed in a heated chamber; poor when cooled quickly."},
+        "thermal_limit": {"value": 95, "min": 85, "max": 100, "confidence": "medium", "source": "ABS Tg ~105 degC; load limit taken below it", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 16, "min": 8, "max": 20, "confidence": "low", "source": "Typical X1C ABS flow limits"},
+        "warp_tendency": {"value": 0.85, "min": 0.6, "max": 1.0, "confidence": "low", "source": "HEURISTIC index. ABS has high mould shrinkage (~0.4-0.8 %) and the highest practical warping risk of the common filaments."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28},
+        "recommended_wall_count": {"value": 3, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.20, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 240, "max": 270},
+        "bed_temp_c": {"min": 90, "max": 110}
+      }
+    },
+    {
+      "id": "asa",
+      "name": "ASA",
+      "family": "ASA",
+      "fiber_filled": false,
+      "requires_enclosure": true,
+      "properties": {
+        "density": {"value": 1.07, "min": 1.04, "max": 1.10, "confidence": "high", "source": "ASA resin density"},
+        "young_modulus": {"value": 2100, "min": 1700, "max": 2600, "confidence": "medium", "source": "Vendor TDS"},
+        "tensile_strength": {"value": 40, "min": 32, "max": 48, "confidence": "medium", "source": "Vendor TDS"},
+        "layer_adhesion_factor": {"value": 0.55, "min": 0.35, "max": 0.75, "confidence": "low", "source": "HEURISTIC. Comparable to ABS; requires a heated chamber for good Z strength."},
+        "thermal_limit": {"value": 95, "min": 85, "max": 105, "confidence": "medium", "source": "ASA Tg ~100-108 degC", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 16, "min": 8, "max": 20, "confidence": "low", "source": "Typical X1C ASA flow limits"},
+        "warp_tendency": {"value": 0.8, "min": 0.6, "max": 1.0, "confidence": "low", "source": "HEURISTIC index. Similar shrinkage behaviour to ABS, slightly better UV and dimensional stability."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28},
+        "recommended_wall_count": {"value": 3, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.20, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 240, "max": 270},
+        "bed_temp_c": {"min": 90, "max": 110}
+      }
+    },
+    {
+      "id": "asa-cf",
+      "name": "ASA-CF",
+      "family": "ASA",
+      "fiber_filled": true,
+      "requires_enclosure": true,
+      "properties": {
+        "density": {"value": 1.12, "min": 1.05, "max": 1.20, "confidence": "low", "source": "Vendor TDS for carbon-fibre filled ASA"},
+        "young_modulus": {"value": 4200, "min": 3000, "max": 7000, "confidence": "low", "source": "Vendor TDS; large spread"},
+        "tensile_strength": {"value": 45, "min": 35, "max": 60, "confidence": "low", "source": "Vendor TDS"},
+        "layer_adhesion_factor": {"value": 0.45, "min": 0.3, "max": 0.6, "confidence": "low", "source": "HEURISTIC. Fibre reinforcement in XY only."},
+        "thermal_limit": {"value": 95, "min": 85, "max": 105, "confidence": "low", "source": "Matrix Tg governs", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 12, "min": 6, "max": 16, "confidence": "low", "source": "Filled filament"},
+        "warp_tendency": {"value": 0.55, "min": 0.35, "max": 0.8, "confidence": "low", "source": "HEURISTIC index. Fibre filling measurably reduces shrinkage relative to unfilled ASA."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28, "note": "Abrasive: hardened nozzle required."},
+        "recommended_wall_count": {"value": 4, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.25, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 250, "max": 280},
+        "bed_temp_c": {"min": 90, "max": 110}
+      }
+    },
+    {
+      "id": "pa",
+      "name": "PA (Nylon)",
+      "family": "PA",
+      "fiber_filled": false,
+      "requires_enclosure": true,
+      "properties": {
+        "density": {"value": 1.10, "min": 1.01, "max": 1.18, "confidence": "medium", "source": "PA6/PA12 resin density; blends vary"},
+        "young_modulus": {"value": 1600, "min": 900, "max": 2600, "confidence": "low", "source": "Vendor TDS, dry-as-printed. Moisture uptake lowers modulus substantially."},
+        "tensile_strength": {"value": 55, "min": 40, "max": 75, "confidence": "low", "source": "Vendor TDS, dry-as-printed"},
+        "layer_adhesion_factor": {"value": 0.70, "min": 0.5, "max": 0.9, "confidence": "low", "source": "HEURISTIC. Semi-crystalline polyamides are reported to bond well between layers when printed hot and in a chamber."},
+        "thermal_limit": {"value": 110, "min": 80, "max": 140, "confidence": "low", "source": "No sharp Tg limit; continuous use temperature depends on grade and moisture", "basis": "continuous use"},
+        "max_volumetric_flow": {"value": 12, "min": 6, "max": 16, "confidence": "low", "source": "Typical figures"},
+        "warp_tendency": {"value": 0.75, "min": 0.5, "max": 1.0, "confidence": "low", "source": "HEURISTIC index. Semi-crystalline shrinkage is high."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28, "note": "Dry the filament before printing; moisture dominates results."},
+        "recommended_wall_count": {"value": 4, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.25, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 260, "max": 300},
+        "bed_temp_c": {"min": 80, "max": 110}
+      }
+    },
+    {
+      "id": "pa-cf",
+      "name": "PA-CF",
+      "family": "PA",
+      "fiber_filled": true,
+      "requires_enclosure": true,
+      "properties": {
+        "density": {"value": 1.15, "min": 1.06, "max": 1.25, "confidence": "low", "source": "Vendor TDS for carbon-fibre filled polyamide"},
+        "young_modulus": {"value": 5500, "min": 3500, "max": 9000, "confidence": "low", "source": "Vendor TDS; the stiffest of the common filled filaments, very brand dependent"},
+        "tensile_strength": {"value": 80, "min": 55, "max": 110, "confidence": "low", "source": "Vendor TDS, dry-as-printed"},
+        "layer_adhesion_factor": {"value": 0.45, "min": 0.3, "max": 0.6, "confidence": "low", "source": "HEURISTIC. High XY strength from fibre alignment makes the Z/XY ratio worse even though absolute Z strength is decent."},
+        "thermal_limit": {"value": 120, "min": 90, "max": 150, "confidence": "low", "source": "Grade dependent", "basis": "continuous use"},
+        "max_volumetric_flow": {"value": 10, "min": 5, "max": 14, "confidence": "low", "source": "Filled, high viscosity"},
+        "warp_tendency": {"value": 0.5, "min": 0.3, "max": 0.8, "confidence": "low", "source": "HEURISTIC index. Fibre filling reduces the shrinkage of the base polyamide."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28, "note": "Abrasive and hygroscopic: hardened nozzle, dry filament."},
+        "recommended_wall_count": {"value": 4, "min": 2, "max": 8},
+        "recommended_infill": {"value": 0.30, "min": 0.10, "max": 0.70},
+        "nozzle_temp_c": {"min": 270, "max": 300},
+        "bed_temp_c": {"min": 90, "max": 110}
+      }
+    },
+    {
+      "id": "pc",
+      "name": "PC (Polycarbonate)",
+      "family": "PC",
+      "fiber_filled": false,
+      "requires_enclosure": true,
+      "properties": {
+        "density": {"value": 1.20, "min": 1.18, "max": 1.24, "confidence": "high", "source": "PC resin density"},
+        "young_modulus": {"value": 2200, "min": 1900, "max": 2600, "confidence": "medium", "source": "Vendor TDS"},
+        "tensile_strength": {"value": 60, "min": 50, "max": 72, "confidence": "medium", "source": "Vendor TDS, XY printed"},
+        "layer_adhesion_factor": {"value": 0.6, "min": 0.4, "max": 0.8, "confidence": "low", "source": "HEURISTIC. Good bonding when printed very hot in a closed chamber; drops sharply otherwise."},
+        "thermal_limit": {"value": 125, "min": 110, "max": 140, "confidence": "medium", "source": "PC Tg ~145 degC", "basis": "Tg"},
+        "max_volumetric_flow": {"value": 12, "min": 6, "max": 16, "confidence": "low", "source": "Typical figures"},
+        "warp_tendency": {"value": 0.9, "min": 0.7, "max": 1.0, "confidence": "low", "source": "HEURISTIC index. High processing temperature and large thermal contraction give PC the highest practical warping risk."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.10, "max": 0.28},
+        "recommended_wall_count": {"value": 4, "min": 2, "max": 6},
+        "recommended_infill": {"value": 0.25, "min": 0.10, "max": 0.60},
+        "nozzle_temp_c": {"min": 260, "max": 300},
+        "bed_temp_c": {"min": 90, "max": 120}
+      }
+    },
+    {
+      "id": "tpu",
+      "name": "TPU 95A",
+      "family": "TPU",
+      "fiber_filled": false,
+      "requires_enclosure": false,
+      "properties": {
+        "density": {"value": 1.20, "min": 1.10, "max": 1.25, "confidence": "medium", "source": "TPU resin density"},
+        "young_modulus": {"value": 30, "min": 8, "max": 100, "confidence": "low", "source": "Elastomer. A tensile modulus is only meaningful at small strain; TPU is normally specified by Shore hardness, not by E."},
+        "tensile_strength": {"value": 35, "min": 20, "max": 50, "confidence": "low", "source": "Vendor TDS. Failure is at very large elongation, so a strength-based utilisation is of limited use."},
+        "layer_adhesion_factor": {"value": 0.85, "min": 0.7, "max": 0.95, "confidence": "low", "source": "HEURISTIC. Elastomers bond well between layers and the compliance redistributes stress."},
+        "thermal_limit": {"value": 70, "min": 60, "max": 80, "confidence": "low", "source": "Softening range, grade dependent", "basis": "softening"},
+        "max_volumetric_flow": {"value": 6, "min": 2, "max": 10, "confidence": "medium", "source": "Flexible filament, feed rate limited"},
+        "warp_tendency": {"value": 0.1, "min": 0.02, "max": 0.25, "confidence": "low", "source": "HEURISTIC index. Compliant material relieves internal stress instead of lifting."}
+      },
+      "print_defaults": {
+        "recommended_layer_height": {"value": 0.20, "min": 0.12, "max": 0.28},
+        "recommended_wall_count": {"value": 3, "min": 2, "max": 5},
+        "recommended_infill": {"value": 0.15, "min": 0.05, "max": 0.40},
+        "nozzle_temp_c": {"min": 220, "max": 250},
+        "bed_temp_c": {"min": 30, "max": 50}
+      },
+      "notes": [
+        "Elastic analysis with a linear modulus does not describe TPU. Treat any mechanical utilisation reported for TPU as indicative only."
+      ]
+    }
+  ]
+}
