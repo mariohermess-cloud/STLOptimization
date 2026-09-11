@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Local data
+/storage/
+*.local
+.env
+.env.*
+!.env.example
+
+# Large generated fixtures (regenerate with scripts/make_test_data.py --large)
+test-data/large_*.stl
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

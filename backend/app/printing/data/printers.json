@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "printers": [
+    {
+      "id": "bambu_x1c",
+      "name": "Bambu Lab X1 Carbon",
+      "vendor": "Bambu Lab",
+      "build_volume_mm": [256.0, 256.0, 256.0],
+      "bed_size_mm": [256.0, 256.0],
+      "default_nozzle_mm": 0.4,
+      "available_nozzles_mm": [0.2, 0.4, 0.6, 0.8],
+      "enclosed": true,
+      "heated_bed_max_c": 110.0,
+      "max_acceleration_mm_s2": 20000.0,
+      "max_print_speed_mm_s": 500.0,
+      "travel_speed_mm_s": 500.0,
+      "source": "Bambu Lab published X1 Carbon specifications (build volume 256x256x256 mm, hardened nozzle, enclosed chamber, hot bed to 110 degC).",
+      "notes": [
+        "The enclosed chamber is why ABS/ASA/PC are practical on this machine; the warping heuristic takes the enclosure into account.",
+        "Peak speed and acceleration figures are machine maxima, not the values a real print reaches. The print-time estimate uses material flow limits instead."
+      ]
+    },
+    {
+      "id": "generic_open_i3",
+      "name": "Generic open-frame printer (220 x 220 x 250)",
+      "vendor": "Generic",
+      "build_volume_mm": [220.0, 220.0, 250.0],
+      "bed_size_mm": [220.0, 220.0],
+      "default_nozzle_mm": 0.4,
+      "available_nozzles_mm": [0.2, 0.4, 0.6, 0.8],
+      "enclosed": false,
+      "heated_bed_max_c": 100.0,
+      "max_acceleration_mm_s2": 3000.0,
+      "max_print_speed_mm_s": 150.0,
+      "travel_speed_mm_s": 200.0,
+      "source": "Generic profile provided so that printer independence of the engine is exercised, not a specific product.",
+      "notes": [
+        "No enclosure: the warping heuristic applies its open-frame penalty for high-shrinkage materials."
+      ]
+    }
+  ]
+}
