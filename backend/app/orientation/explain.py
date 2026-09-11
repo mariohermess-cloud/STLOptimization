@@ -110,7 +110,7 @@ def explain(
     if bed.contact_area_mm2 >= 100.0:
         reasons.append(
             f"Bed contact area {bed.contact_area_mm2:.0f} mm^2 over a "
-            f"{bed.footprint_size_mm[0]:.0f} x {bed.footprint_size_mm[1]:.0f} mm footprint."
+            f"{candidate.footprint_mm[0]:.0f} x {candidate.footprint_mm[1]:.0f} mm footprint."
         )
     else:
         warnings.append(

@@ -86,10 +86,12 @@ def validate_and_repair(mesh: trimesh.Trimesh, *, repair: bool = True) -> MeshVa
     1. ``merge_vertices`` - welds numerically identical vertices (STL stores
        every triangle independently, so this is always needed).
     2. removal of degenerate (zero area) and duplicated faces.
-    3. ``fix_normals`` - makes the winding consistent and the normals outward.
-       Only attempted when the winding is inconsistent.
+    3. ``fix_winding`` - makes the winding consistent. Only attempted when it
+       is not already consistent.
     4. ``fill_holes`` - closes small boundary loops. Only attempted when the
        mesh is not watertight; the result is re-checked afterwards.
+    5. ``fix_inversion`` - flips the normals of a mesh whose enclosed volume
+       comes out negative, i.e. one that is inside out.
 
     Nothing here changes the shape of a valid mesh.
     """
@@ -98,7 +100,6 @@ def validate_and_repair(mesh: trimesh.Trimesh, *, repair: bool = True) -> MeshVa
 
     before_faces = len(mesh.faces)
     mesh.merge_vertices()
-    trimesh.repair.fix_inversion(mesh, multibody=True)
 
     degenerate_mask = ~mesh.nondegenerate_faces(height=1e-9)
     degenerate = int(np.count_nonzero(degenerate_mask))
@@ -120,7 +121,6 @@ def validate_and_repair(mesh: trimesh.Trimesh, *, repair: bool = True) -> MeshVa
             repairs.append("repaired inconsistent triangle winding")
 
     if repair and not mesh.is_watertight:
-        holes_before = int(len(mesh.facets_boundary)) if hasattr(mesh, "facets_boundary") else 0
         try:
             trimesh.repair.fill_holes(mesh)
         except Exception as exc:  # noqa: BLE001
@@ -132,10 +132,6 @@ def validate_and_repair(mesh: trimesh.Trimesh, *, repair: bool = True) -> MeshVa
                 "The mesh is not watertight. Volume, mass and internal analyses "
                 "are approximate for this model."
             )
-        del holes_before
-
-    if repair:
-        trimesh.repair.fix_normals(mesh, multibody=True)
 
     if len(mesh.faces) == 0:
         raise InvalidMeshError("All triangles were degenerate; there is no usable geometry.")
@@ -157,6 +153,14 @@ def validate_and_repair(mesh: trimesh.Trimesh, *, repair: bool = True) -> MeshVa
         body_count = int(mesh.body_count)
     except Exception:  # noqa: BLE001
         body_count = 1
+
+    if repair and float(mesh.volume) < 0.0:
+        # Every triangle wound the wrong way round: the enclosed volume comes
+        # out negative. Splitting into bodies is only paid for when the model
+        # actually has more than one.
+        trimesh.repair.fix_inversion(mesh, multibody=body_count > 1)
+        repairs.append("flipped inverted face normals")
+
     if body_count > 1:
         warnings.append(
             f"The model contains {body_count} separate bodies. They are analysed "

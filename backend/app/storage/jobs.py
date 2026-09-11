@@ -46,9 +46,24 @@ class JobRecord:
 
 class JobManager:
     def __init__(self, workers: int = 2) -> None:
-        self._pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="peo-job")
+        self._workers = workers
+        self._pool: ThreadPoolExecutor | None = None
         self._jobs: dict[str, JobRecord] = {}
         self._lock = threading.RLock()
+
+    def _ensure_pool(self) -> ThreadPoolExecutor:
+        """Create the pool on first use, and again after a shutdown.
+
+        The manager is a process-wide singleton, so it has to survive an
+        application restart within the same process (which is exactly what the
+        test suite does between test clients).
+        """
+        with self._lock:
+            if self._pool is None:
+                self._pool = ThreadPoolExecutor(
+                    max_workers=self._workers, thread_name_prefix="peo-job"
+                )
+            return self._pool
 
     def submit(
         self,
@@ -118,7 +133,7 @@ class JobManager:
             )
             return result
 
-        job.future = self._pool.submit(run)
+        job.future = self._ensure_pool().submit(run)
         return job
 
     def get(self, job_id: str) -> JobRecord:
@@ -139,7 +154,10 @@ class JobManager:
             self._jobs.pop(job.id, None)
 
     def shutdown(self) -> None:
-        self._pool.shutdown(wait=False, cancel_futures=True)
+        with self._lock:
+            pool, self._pool = self._pool, None
+        if pool is not None:
+            pool.shutdown(wait=False, cancel_futures=True)
 
 
 jobs = JobManager()

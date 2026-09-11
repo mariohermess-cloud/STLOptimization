@@ -107,13 +107,20 @@ def minimum_footprint_z_rotation(points_xy: np.ndarray) -> tuple[float, float, t
     # Directions are equivalent modulo 90 degrees for a rectangle.
     angles = np.unique(np.mod(angles, np.pi / 2.0))
 
-    best = (0.0, np.inf, (0.0, 0.0))
-    for theta in angles:
-        c, s = np.cos(-theta), np.sin(-theta)
-        rot = np.array([[c, -s], [s, c]])
-        local = hull_pts @ rot.T
-        extent = local.max(axis=0) - local.min(axis=0)
-        area = float(extent[0] * extent[1])
-        if area < best[1]:
-            best = (float(np.degrees(-theta)), area, (float(extent[0]), float(extent[1])))
-    return best
+    # Vectorised over all candidate angles at once: for a hull with h points
+    # and a candidate angles this is one (a, h) matrix product per axis rather
+    # than a Python loop, which matters because a dense mesh can have a hull
+    # with thousands of edges.
+    cos = np.cos(-angles)
+    sin = np.sin(-angles)
+    x = np.outer(cos, hull_pts[:, 0]) - np.outer(sin, hull_pts[:, 1])
+    y = np.outer(sin, hull_pts[:, 0]) + np.outer(cos, hull_pts[:, 1])
+    width = x.max(axis=1) - x.min(axis=1)
+    depth = y.max(axis=1) - y.min(axis=1)
+    areas = width * depth
+    best = int(np.argmin(areas))
+    return (
+        float(np.degrees(-angles[best])),
+        float(areas[best]),
+        (float(width[best]), float(depth[best])),
+    )

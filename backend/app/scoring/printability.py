@@ -18,7 +18,6 @@ import numpy as np
 from scipy.spatial import ConvexHull, QhullError
 
 from app.geometry.prepared import PreparedMesh, orthonormal_basis
-from app.geometry.transforms import minimum_footprint_z_rotation
 
 # --- documented constants -------------------------------------------------
 #: Typical sparse-support infill fraction used by slicers. Converts the swept
@@ -63,7 +62,6 @@ class OverhangResult:
 class BedResult:
     contact_area_mm2: float
     footprint_area_mm2: float
-    footprint_size_mm: tuple[float, float]
     footprint_points: np.ndarray
     max_span_mm: float
     height_mm: float
@@ -71,7 +69,6 @@ class BedResult:
     com_margin_mm: float
     com_inside: bool
     slenderness: float
-    z_rotation_deg: float
     score: float
 
 
@@ -206,9 +203,10 @@ def analyse_bed(
     contact_area = float(prepared.face_areas[overhangs.bed_face_mask].sum())
 
     # Footprint outline: the projection of the convex hull bounds the part
-    # exactly, and is far cheaper than projecting every vertex.
+    # exactly, and is far cheaper than projecting every vertex. The minimum
+    # area rectangle itself is computed by the optimiser, which needs it in
+    # the rotated world frame to report the spin angle.
     hull_2d = np.column_stack((prepared.hull_points @ u, prepared.hull_points @ v))
-    z_rotation, footprint_area_box, footprint_size = minimum_footprint_z_rotation(hull_2d)
 
     # Contact polygon: the vertices that actually touch the plate.
     touching = prepared.vertices[vertex_heights <= h_min + max(bed_tolerance_mm, 1e-6)]
@@ -243,7 +241,6 @@ def analyse_bed(
     return BedResult(
         contact_area_mm2=contact_area,
         footprint_area_mm2=float(footprint_area),
-        footprint_size_mm=(float(footprint_size[0]), float(footprint_size[1])),
         footprint_points=footprint_points,
         max_span_mm=max_span,
         height_mm=height,
@@ -251,7 +248,6 @@ def analyse_bed(
         com_margin_mm=float(margin if inside else -margin),
         com_inside=bool(inside),
         slenderness=float(slenderness),
-        z_rotation_deg=float(z_rotation),
         score=float(0.5 * tipping_score + 0.5 * adhesion_score),
     )
 

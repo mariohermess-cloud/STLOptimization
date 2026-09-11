@@ -23,6 +23,30 @@ import trimesh
 logger = logging.getLogger(__name__)
 
 
+def second_moment_about_axis(inertia: np.ndarray, axis_2d: np.ndarray) -> float:
+    """Second moment of area about an in-plane axis through the centroid.
+
+    ``inertia`` is ``[[Ixx, Ixy], [Ixy, Iyy]]`` with ``Ixx = integral y^2 dA``
+    and ``Iyy = integral x^2 dA``. For a neutral axis along ``a`` the distance
+    of a point from that axis is ``p . n`` with ``n`` the in-plane normal of
+    ``a``, so
+
+        I = integral (n_x x + n_y y)^2 dA
+          = n_x^2 * Iyy + 2 n_x n_y * Ixy + n_y^2 * Ixx
+
+    Note that ``n_x`` pairs with ``Iyy``, not with ``Ixx``.
+    """
+    a = np.asarray(axis_2d, dtype=float)
+    norm = np.linalg.norm(a)
+    if norm < 1e-12:
+        return float(max(inertia[0, 0], inertia[1, 1]))
+    a = a / norm
+    n = np.array([-a[1], a[0]])
+    return float(
+        n[0] * n[0] * inertia[1, 1] + 2.0 * n[0] * n[1] * inertia[0, 1] + n[1] * n[1] * inertia[0, 0]
+    )
+
+
 @dataclass
 class SectionProperties:
     """Properties of one planar cut, expressed in the section's 2D frame.
@@ -56,17 +80,10 @@ class SectionProperties:
     def second_moment_about(self, axis_2d: np.ndarray) -> float:
         """Second moment of area for bending about ``axis_2d`` (in-plane axis).
 
-        For a bending moment whose vector points along ``axis_2d``, the neutral
-        axis is ``axis_2d`` and the relevant second moment is
-        ``I = n^T J n`` with ``n`` the in-plane normal of the neutral axis.
+        For a bending moment whose vector points along ``axis_2d`` the neutral
+        axis is ``axis_2d`` itself; see :func:`second_moment_about_axis`.
         """
-        a = np.asarray(axis_2d, dtype=float)
-        norm = np.linalg.norm(a)
-        if norm < 1e-12:
-            return float(max(self.inertia[0, 0], self.inertia[1, 1]))
-        a = a / norm
-        n = np.array([-a[1], a[0]])  # in-plane normal to the neutral axis
-        return float(n @ self.inertia @ n)
+        return second_moment_about_axis(self.inertia, axis_2d)
 
     def extreme_fibre_distance(self, axis_2d: np.ndarray) -> tuple[float, np.ndarray]:
         """Distance of the furthest material point from the neutral axis.
@@ -180,7 +197,7 @@ def section_at(
         path = mesh.section(plane_origin=np.asarray(origin, dtype=float), plane_normal=normal)
         if path is None:
             return None
-        planar, to_3d = path.to_planar(normal=normal)
+        planar, to_3d = path.to_2D(normal=normal)
         polygons = planar.polygons_full
     except Exception as exc:  # noqa: BLE001 - section failures are expected on odd meshes
         logger.debug("section failed", extra={"reason": str(exc)})
@@ -235,7 +252,7 @@ def shell_inertia_fraction(
         path = mesh.section(plane_origin=np.asarray(origin, dtype=float), plane_normal=normal)
         if path is None:
             return None
-        planar, _ = path.to_planar(normal=normal)
+        planar, _ = path.to_2D(normal=normal)
         polygons = planar.polygons_full
     except Exception:  # noqa: BLE001
         return None
@@ -264,9 +281,7 @@ def shell_inertia_fraction(
     axis = np.array([1.0, 0.0]) if bending_axis_2d is None else np.asarray(bending_axis_2d, float)
 
     def _inertia(props) -> float:
-        a = axis / max(np.linalg.norm(axis), 1e-12)
-        n = np.array([-a[1], a[0]])
-        return float(n @ props["inertia"] @ n)
+        return second_moment_about_axis(props["inertia"], axis)
 
     full_i = _inertia(full)
     if core_props is None:

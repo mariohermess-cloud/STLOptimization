@@ -11,3 +11,4 @@ shapely==2.1.2
 networkx==3.6.1
 manifold3d==3.5.3
 rtree==1.4.1
+fast-simplification==0.2.0

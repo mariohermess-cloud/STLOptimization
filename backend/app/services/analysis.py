@@ -295,6 +295,13 @@ def detect_critical_regions(
                         },
                     )
                 )
+
+    if record.decimated:
+        # Face indices of the simplified analysis mesh do not address the mesh
+        # the viewer loaded, so they are dropped rather than highlighting the
+        # wrong triangles. The reported positions stay valid.
+        for region in regions:
+            region.face_ids = []
     return regions
 
 

@@ -46,6 +46,20 @@ class ThicknessSample:
     points: np.ndarray
     thickness: np.ndarray
     face_ids: np.ndarray
+    #: False when the samples were taken on a simplified copy of the mesh, in
+    #: which case ``face_ids`` do not address the caller's triangles and must
+    #: not be sent to the viewer.
+    indices_valid: bool = True
+
+
+#: Ray casting cost is linear in (samples x triangles), so the sampling budget
+#: is adapted to the mesh size instead of being a fixed number.
+THICKNESS_WORK_BUDGET = 30_000_000
+THICKNESS_MIN_SAMPLES = 600
+#: Meshes above this are simplified before thickness sampling. The measurement
+#: then describes the simplified surface, which is why thin-wall findings are
+#: reported as screening results rather than as exact minimum wall thickness.
+THICKNESS_FACE_BUDGET = 15_000
 
 
 def sample_thickness(
@@ -55,25 +69,40 @@ def sample_thickness(
 
     From the centre of each sampled face a ray is cast along the inward
     normal; the distance to the next surface is the local wall thickness.
-    This is the standard ray-based thickness measure. It under-reports on
-    strongly curved walls and is undefined where the inward ray escapes the
-    solid, which is why samples with no hit are dropped rather than guessed.
+    This is the standard ray-based thickness measure, and it is exact for a
+    flat wall: a 20 mm cube measures 20 mm, an 8 mm plate measures 8 mm. It
+    under-reports on strongly curved walls and is undefined where the inward
+    ray escapes the solid, so samples with no hit are dropped rather than
+    guessed.
+
+    APPROXIMATION on large models: the mesh is simplified and the surface is
+    sub-sampled, both bounded by ``THICKNESS_FACE_BUDGET`` and
+    ``THICKNESS_WORK_BUDGET``. A thin feature smaller than the sampling
+    density can be missed.
     """
-    face_count = len(mesh.faces)
-    if face_count == 0:
+    if len(mesh.faces) == 0:
         return None
-    if face_count > max_samples:
+
+    from app.geometry.analyzer import decimate_for_analysis
+
+    work_mesh, simplified = decimate_for_analysis(mesh, THICKNESS_FACE_BUDGET)
+    face_count = len(work_mesh.faces)
+
+    budget = max(THICKNESS_MIN_SAMPLES, THICKNESS_WORK_BUDGET // max(face_count, 1))
+    sample_count = min(max_samples, budget, face_count)
+
+    if sample_count < face_count:
         rng = np.random.default_rng(seed=12345)
-        face_ids = rng.choice(face_count, size=max_samples, replace=False)
+        face_ids = rng.choice(face_count, size=sample_count, replace=False)
     else:
         face_ids = np.arange(face_count)
 
-    points = np.asarray(mesh.triangles_center, dtype=float)[face_ids]
-    normals = np.asarray(mesh.face_normals, dtype=float)[face_ids]
+    points = np.asarray(work_mesh.triangles_center, dtype=float)[face_ids]
+    normals = np.asarray(work_mesh.face_normals, dtype=float)[face_ids]
 
     try:
         thickness = trimesh.proximity.thickness(
-            mesh=mesh, points=points, exterior=False, normals=normals, method="ray"
+            mesh=work_mesh, points=points, exterior=False, normals=normals, method="ray"
         )
     except Exception as exc:  # noqa: BLE001
         logger.info("thickness sampling failed", extra={"reason": str(exc)})
@@ -83,7 +112,9 @@ def sample_thickness(
     valid = np.isfinite(thickness) & (thickness > 1e-6)
     if not np.any(valid):
         return None
-    return ThicknessSample(points[valid], thickness[valid], face_ids[valid])
+    return ThicknessSample(
+        points[valid], thickness[valid], face_ids[valid], indices_valid=not simplified
+    )
 
 
 def detect_thin_walls(
@@ -133,7 +164,11 @@ def detect_thin_walls(
                             else "."
                         )
                     ),
-                    face_ids=[int(f) for f in samples.face_ids[mask][cluster][:200]],
+                    face_ids=(
+                        [int(f) for f in samples.face_ids[mask][cluster][:200]]
+                        if samples.indices_valid
+                        else []
+                    ),
                     position=[float(v) for v in cluster_points.mean(axis=0)],
                     measurement_mm=float(cluster_values.min()),
                     metric={
