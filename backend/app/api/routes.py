@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, File, Query, Response, UploadFile
-from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.errors import (
@@ -78,7 +77,7 @@ def read_printer(printer_id: str) -> Printer:
 @router.get("/presets", tags=["catalogue"])
 def list_presets() -> list[dict]:
     from app.orientation.presets import PRESET_LABELS, PRESET_WEIGHTS
-    from app.schemas import OptimizationWeights, Preset
+    from app.schemas import OptimizationWeights
 
     entries = []
     for preset, label in PRESET_LABELS.items():
@@ -261,8 +260,12 @@ def get_job(job_id: str) -> Job:
 @router.get("/jobs/{job_id}/result", response_model=OrientationResult, tags=["optimization"])
 def get_job_result(job_id: str) -> OrientationResult:
     job = jobs.get(job_id)
-    if job.status is JobStatus.failed and job.error:
-        return JSONResponse(status_code=500, content={"error": job.error})  # type: ignore[return-value]
+    if job.status is JobStatus.failed:
+        error = job.error or {}
+        raise AppError(
+            error.get("message", "The analysis failed."),
+            **error.get("details", {}),
+        )
     if job.status is not JobStatus.completed or job.result is None:
         raise AnalysisRequiredError("The job has not finished yet.")
     return job.result

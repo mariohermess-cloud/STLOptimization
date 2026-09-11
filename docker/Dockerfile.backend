@@ -1,5 +1,5 @@
 # Print Engineering Optimizer - API
-FROM python:3.12-slim AS base
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -8,12 +8,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# trimesh, scipy, shapely and rtree ship manylinux wheels, so no compiler is
-# needed. libspatialindex is the one runtime library rtree links against.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libspatialindex-c6 curl \
-    && rm -rf /var/lib/apt/lists/*
-
+# No apt layer: every dependency ships a manylinux wheel, and the rtree wheel
+# bundles libspatialindex itself, so there is no system library to install and
+# no distribution package name to get wrong. The healthcheck uses the Python
+# already in the image rather than pulling in curl.
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -29,6 +27,8 @@ USER peo
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:8000/health || exit 1
+    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"]
 
+# One worker on purpose: the model store is per process (see
+# docs/architecture.md). Scaling out means shared storage, not more workers.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

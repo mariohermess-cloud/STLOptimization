@@ -103,7 +103,7 @@ Test fixtures:
 
 ```bash
 cd backend
-PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 131 tests, ~50 s
+PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 132 tests, ~50 s
 PYTHONPATH=. ../.venv/bin/python -m pytest -m slow -s  # performance benchmark
 ```
 

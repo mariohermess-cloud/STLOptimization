@@ -250,6 +250,42 @@ class TestOptimization:
     def test_unknown_job(self, client):
         assert client.get("/api/jobs/nope").status_code == 404
 
+    def test_failed_job_reports_an_error_instead_of_a_result(
+        self, client, stl_bytes, monkeypatch
+    ):
+        from app.core.errors import OptimizationFailedError
+        from app.services import analysis as analysis_module
+
+        def boom(*args, **kwargs):
+            raise OptimizationFailedError("The orientation search could not complete.")
+
+        monkeypatch.setattr(analysis_module, "run_optimization", boom)
+
+        model_id = upload(client, stl_bytes)
+        job = client.post(
+            f"/api/models/{model_id}/optimize-orientation",
+            json={
+                "material": {"material_id": "petg"},
+                "printability_only": True,
+                "search": {"coarse_step_deg": 40, "enable_fine_stage": False},
+            },
+        ).json()
+
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            job = client.get(f"/api/jobs/{job['id']}").json()
+            if job["status"] in ("completed", "failed"):
+                break
+            time.sleep(0.1)
+        assert job["status"] == "failed"
+        assert job["error"]["code"] == "optimization_failed"
+        assert job["result_available"] is False
+
+        response = client.get(f"/api/jobs/{job['id']}/result")
+        assert response.status_code >= 400
+        body = response.json()
+        assert "Traceback" not in body["error"]["message"]
+
     def test_results_before_analysis(self, client, stl_bytes):
         model_id = upload(client, stl_bytes)
         response = client.get(f"/api/models/{model_id}/results")
