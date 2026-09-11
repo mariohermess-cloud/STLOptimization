@@ -1,0 +1,196 @@
+name: Analyse a part
+
+# Batch analysis without the web UI. GitHub Actions jobs accept no inbound
+# connections, so the interactive app cannot be served from here - but the
+# engine runs headlessly and hands back the JSON report as an artifact.
+#
+# The fixed and loaded surfaces are given as face selectors (predicates on a
+# triangle centroid, e.g. "z<2") because there is no viewer to click in. See
+# scripts/analyze.py --help.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stl:
+        description: "Path to the STL in this repository (e.g. test-data/bracket.stl)"
+        required: true
+        default: "test-data/beam.stl"
+      material:
+        description: "Material"
+        required: true
+        default: petg
+        type: choice
+        options:
+          [pla, pla-cf, petg, petg-cf, abs, asa, asa-cf, pa, pa-cf, pc, tpu]
+      preset:
+        description: "Optimisation priority"
+        required: true
+        default: balanced
+        type: choice
+        options: [max_strength, balanced, fast, lightweight]
+      nozzle:
+        description: "Nozzle diameter in mm"
+        required: true
+        default: "0.4"
+        type: choice
+        options: ["0.2", "0.4", "0.6", "0.8"]
+      fix:
+        description: 'Fixed surface selector, e.g. "x<-55" (leave empty for printability only)'
+        required: false
+        default: "x<-55"
+      load_at:
+        description: 'Loaded surface selector, e.g. "x>55" (optional)'
+        required: false
+        default: "x>55"
+      force:
+        description: 'Force in newtons as "FX FY FZ" (STL coordinates)'
+        required: false
+        default: "0 0 -200"
+      torque:
+        description: 'Torque in newton metres as "TX TY TZ" (optional)'
+        required: false
+        default: ""
+      load_type:
+        description: "Load case label (the analysis follows the vectors regardless)"
+        required: false
+        default: bending
+        type: choice
+        options: [tension, compression, bending, shear, torsion, custom]
+      overhang_threshold:
+        description: "Overhang threshold in degrees from the build plate"
+        required: false
+        default: "45"
+        type: choice
+        options: ["45", "50", "55", "60"]
+
+permissions:
+  contents: read
+
+jobs:
+  analyse:
+    name: ${{ inputs.stl }} · ${{ inputs.material }} · ${{ inputs.preset }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      # The bundled example parts are generated, not committed, so a run
+      # against test-data/* works without any extra setup.
+      - name: Generate bundled example parts
+        run: python scripts/make_test_data.py test-data
+
+      # Inputs are passed through the environment rather than interpolated
+      # into the script text, so a value containing shell metacharacters is
+      # data and never code.
+      - name: Check that the STL exists
+        env:
+          STL: ${{ inputs.stl }}
+        run: |
+          if [ ! -f "$STL" ]; then
+            echo "::error::No such file: $STL"
+            echo "Available example parts:"
+            ls -1 test-data/*.stl
+            exit 1
+          fi
+
+      - name: Run the analysis
+        id: analyse
+        env:
+          PEO_OPTIMIZER_WORKERS: "4"
+          STL: ${{ inputs.stl }}
+          MATERIAL: ${{ inputs.material }}
+          PRESET: ${{ inputs.preset }}
+          NOZZLE: ${{ inputs.nozzle }}
+          OVERHANG: ${{ inputs.overhang_threshold }}
+          FIX: ${{ inputs.fix }}
+          LOAD_AT: ${{ inputs.load_at }}
+          FORCE: ${{ inputs.force }}
+          TORQUE: ${{ inputs.torque }}
+          LOAD_TYPE: ${{ inputs.load_type }}
+        run: |
+          set -o pipefail
+          mkdir -p out
+
+          args=(
+            "$STL"
+            --material "$MATERIAL"
+            --preset "$PRESET"
+            --nozzle "$NOZZLE"
+            --overhang-threshold "$OVERHANG"
+            --output out/analysis-report.json
+            --settings-output out/print-settings.json
+          )
+
+          if [ -n "$FIX" ]; then
+            args+=(--fix "$FIX")
+            [ -n "$LOAD_AT" ] && args+=(--load-at "$LOAD_AT")
+            # Deliberate word splitting: "0 0 -200" becomes three arguments.
+            [ -n "$FORCE" ] && args+=(--force $FORCE)
+            [ -n "$TORQUE" ] && args+=(--torque $TORQUE)
+            args+=(--load-type "$LOAD_TYPE")
+          else
+            echo "::notice::No fixed surface given - ranking printability only."
+            args+=(--printability-only)
+          fi
+
+          python scripts/analyze.py "${args[@]}" | tee out/analysis.txt
+
+      # The readable summary goes into the run page itself, so the numbers are
+      # visible without downloading anything.
+      - name: Publish the summary
+        if: always()
+        env:
+          STL: ${{ inputs.stl }}
+          MATERIAL: ${{ inputs.material }}
+          PRESET: ${{ inputs.preset }}
+          NOZZLE: ${{ inputs.nozzle }}
+          OVERHANG: ${{ inputs.overhang_threshold }}
+          FIX: ${{ inputs.fix }}
+          LOAD_AT: ${{ inputs.load_at }}
+          FORCE: ${{ inputs.force }}
+          TORQUE: ${{ inputs.torque }}
+        run: |
+          {
+            echo "## Analysis: \`$STL\`"
+            echo
+            echo "| Input | Value |"
+            echo "| --- | --- |"
+            echo "| Material | \`$MATERIAL\` |"
+            echo "| Priority | \`$PRESET\` |"
+            echo "| Nozzle | $NOZZLE mm |"
+            echo "| Fixed surface | \`${FIX:-(none)}\` |"
+            echo "| Loaded surface | \`${LOAD_AT:-(auto)}\` |"
+            echo "| Force [N] | \`${FORCE:-(none)}\` |"
+            echo "| Torque [Nm] | \`${TORQUE:-(none)}\` |"
+            echo "| Overhang threshold | $OVERHANG° |"
+            echo
+            if [ -f out/analysis.txt ]; then
+              echo '```'
+              cat out/analysis.txt
+              echo '```'
+            else
+              echo "The analysis produced no output - see the step log."
+            fi
+            echo
+            echo "> Engineering-oriented estimates and FDM print optimisation guidance."
+            echo "> Not a certified structural analysis system. The mechanical analysis is"
+            echo "> beam theory on real cross-sections, not a finite element analysis."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-${{ github.run_number }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 30
