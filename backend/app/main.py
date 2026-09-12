@@ -17,6 +17,7 @@ from app.api.routes import router
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.logging_config import configure_logging
+from app.static import mount_web_ui, static_directory
 from app.storage.jobs import jobs
 from app.storage.store import store
 
@@ -153,3 +154,10 @@ def health() -> dict:
 
 
 app.include_router(router)
+
+# The web UI is mounted last: its SPA catch-all must not shadow an API route.
+# Only the portable build sets PEO_STATIC_DIR; in the container nginx serves
+# the bundle and this is a no-op.
+_static = static_directory()
+if _static is not None:
+    mount_web_ui(app, _static)

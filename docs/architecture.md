@@ -134,6 +134,27 @@ The viewer is Z-up, matching the analysis: build plate on XY, build direction
 the offset and an inner group carrying the rotation, so every annotation in
 part coordinates follows the part into the recommended orientation.
 
+## Running it
+
+Three entry points, all driving the same engine:
+
+* **`docker compose up --build`** - nginx serving the built bundle plus one
+  API container. This is the deployment path.
+* **`./scripts/dev.sh`** - uvicorn with reload plus the Vite dev server. Used
+  for development and inside a Codespace (`.devcontainer/`), where the
+  same-origin `/api` proxy means the port forward needs no extra
+  configuration.
+* **`scripts/analyze.py`** - the same pipeline headlessly, for scripting and
+  for the *Analyse a part* GitHub Actions workflow. It calls
+  `services/analysis.py` directly and never touches the HTTP layer, which is
+  a useful check that the orchestration is not entangled with the API.
+
+The CLI has to name the fixed and loaded surfaces without a viewer, so it
+takes predicates on triangle centroids (`z<2`, `x>55`). That is deliberately
+less expressive than clicking a face - it cannot follow a curved region - and
+it reports the matched triangle count and area so a mis-specified selector is
+visible.
+
 ## Security posture
 
 * Upload size is checked while streaming, before the body is buffered.

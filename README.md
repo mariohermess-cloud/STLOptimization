@@ -20,12 +20,73 @@ then says why it chose what it chose.
 
 ## Quick start
 
+Pick whichever suits you — all four run the same engine.
+
+### Portable build (no installation)
+
+Download the bundle for your platform from Actions → *Portable build* →
+Artifacts, unpack it, and run `print-engineering-optimizer`. No Python, no
+Node, no Docker: one process serves both the API and the web UI, and the
+browser opens by itself. About 250 MB unpacked.
+
+The binaries are not code signed, so Windows SmartScreen and macOS Gatekeeper
+will warn on first run — [docs/portable-build.md](docs/portable-build.md)
+covers that and everything else about this path.
+
+### Docker
+
 ```bash
 docker compose up --build
 ```
 
 Then open <http://localhost:8080>. The API is also published on
 <http://127.0.0.1:8000> with interactive docs at `/docs`.
+
+### In a GitHub Codespace
+
+The repository carries a devcontainer, so no local install is needed: **Code →
+Codespaces → Create codespace**, then
+
+```bash
+./scripts/dev.sh
+```
+
+and open the forwarded port 5173. The UI talks to the API same-origin through
+the Vite proxy, so it works unchanged behind the Codespaces port forward -
+including from a tablet or phone.
+
+Note what a Codespace is and is not: it sleeps after about 30 minutes idle,
+uploads live in memory and are gone when it does, and it is not a permanent
+URL you can hand to someone else. For that you need a host that keeps a
+container running; the `docker compose` setup above is what you would deploy.
+
+### Without a browser
+
+`scripts/analyze.py` runs the same engine headlessly. Because there is no
+viewer to click in, the fixed and loaded surfaces are given as **face
+selectors** - predicates on a triangle centroid in the STL's own coordinates:
+
+```bash
+# Cantilever: clamped at x < -55 mm, 200 N downwards at the far end
+python scripts/analyze.py test-data/beam.stl \
+    --material petg-cf --preset max_strength \
+    --fix "x<-55" --load-at "x>55" --force 0 0 -200 --load-type bending \
+    --output report.json --settings-output settings.json
+
+python scripts/analyze.py test-data/bracket.stl --printability-only
+python scripts/analyze.py --list-materials
+```
+
+It prints the ranked orientations, the reasoning, the mechanical result, the
+recommended settings and the confidence breakdown, and reports how many
+triangles and how much area each selector matched - so a wrong selector is
+obvious rather than silent.
+
+The **Analyse a part** workflow (Actions → *Analyse a part* → Run workflow)
+wraps the same script: pick the STL, material, priority, selectors and force
+in the form, and the run page shows the summary with the JSON report attached
+as an artifact. Actions jobs accept no inbound connections, so the interactive
+app cannot be served from there - this is the batch path, not the UI.
 
 ## What it does
 
@@ -103,9 +164,12 @@ Test fixtures:
 
 ```bash
 cd backend
-PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 132 tests, ~50 s
+PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 150 tests, ~50 s
 PYTHONPATH=. ../.venv/bin/python -m pytest -m slow -s  # performance benchmark
 ```
+
+CI runs on every push: backend tests, frontend typecheck and build, both
+Docker images, and the browser end-to-end check.
 
 The orientation tests assert engineering *relationships*, not captured score
 values: a bending stress in the layer plane must beat the same stress across
@@ -206,6 +270,7 @@ intrinsic X→Y→Z in degrees, the same composition three.js applies for
 | [docs/materials.md](docs/materials.md) | Where the material numbers come from and how far to trust them |
 | [docs/orientation-engine.md](docs/orientation-engine.md) | The search, the scores, the presets, measured cost |
 | [docs/bambu-integration.md](docs/bambu-integration.md) | What Bambu Studio integration is actually possible, with sources |
+| [docs/portable-build.md](docs/portable-build.md) | The no-install bundle: using it, building it, and its limits |
 | [docs/roadmap.md](docs/roadmap.md) | What was left out and why |
 
 ## Licence and provenance
