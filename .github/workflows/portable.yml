@@ -13,6 +13,17 @@ on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+  # Also on a pull request that touches the packaging itself. A change to the
+  # spec, the launcher or the runtime dependencies can break the bundle on a
+  # platform nobody has to hand, and the point of this workflow is to find
+  # that out before a release rather than after one. The frontend and backend
+  # are already covered by ci.yml, so their paths are not listed here.
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "backend/app/static.py"
+      - "backend/requirements.txt"
+      - ".github/workflows/portable.yml"
 
 permissions:
   contents: read
