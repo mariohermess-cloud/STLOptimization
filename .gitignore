@@ -28,3 +28,7 @@ test-data/large_*.stl
 .DS_Store
 .idea/
 .vscode/
+
+# PyInstaller
+/build/
+*.manifest

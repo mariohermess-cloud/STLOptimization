@@ -1,0 +1,134 @@
+name: Portable build
+
+# Builds the self-contained, no-install bundle for Linux, Windows and macOS.
+# PyInstaller can only target the platform it runs on, so each one needs its
+# own runner - which is the whole reason this workflow exists.
+#
+# Every job also *starts* the binary it just produced and checks that the API
+# answers and the material database loaded. A bundle that builds but cannot
+# start is the characteristic PyInstaller failure (a missing hidden import or
+# data file), and it would otherwise only surface on a user's machine.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: Linux x86_64
+            artifact: print-engineering-optimizer-linux-x86_64
+            binary: dist/print-engineering-optimizer/print-engineering-optimizer
+          - os: windows-latest
+            label: Windows x86_64
+            artifact: print-engineering-optimizer-windows-x86_64
+            binary: dist/print-engineering-optimizer/print-engineering-optimizer.exe
+          - os: macos-latest
+            label: macOS arm64
+            artifact: print-engineering-optimizer-macos-arm64
+            binary: dist/print-engineering-optimizer/print-engineering-optimizer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build the web UI
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Install the backend and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pyinstaller==6.22.2
+
+      - name: Build the portable bundle
+        run: pyinstaller desktop/portable.spec --noconfirm
+
+      # Proof that the artifact runs on this OS, not just that it compiled.
+      - name: Smoke test the bundle (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          "${{ matrix.binary }}" --no-browser --port 8791 &
+          pid=$!
+          for _ in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8791/health && break
+            sleep 1
+          done
+          echo
+          curl -fsS http://127.0.0.1:8791/health
+          curl -fsS -o /dev/null -w 'web UI: %{http_code}\n' http://127.0.0.1:8791/
+          count=$(curl -fsS http://127.0.0.1:8791/api/materials | python -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "materials loaded: $count"
+          test "$count" = "11"
+          kill $pid
+
+      - name: Smoke test the bundle (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath "${{ matrix.binary }}" `
+            -ArgumentList "--no-browser","--port","8791" -PassThru
+          $ready = $false
+          foreach ($attempt in 1..60) {
+            try {
+              Invoke-RestMethod "http://127.0.0.1:8791/health" -TimeoutSec 2 | Out-Null
+              $ready = $true
+              break
+            } catch { Start-Sleep -Seconds 1 }
+          }
+          if (-not $ready) {
+            Write-Error "The bundle did not start within 60 s."
+            exit 1
+          }
+          Invoke-RestMethod "http://127.0.0.1:8791/health" | ConvertTo-Json -Compress
+          $page = Invoke-WebRequest "http://127.0.0.1:8791/" -TimeoutSec 5
+          Write-Host "web UI: $($page.StatusCode)"
+          $materials = Invoke-RestMethod "http://127.0.0.1:8791/api/materials" -TimeoutSec 10
+          Write-Host "materials loaded: $($materials.Count)"
+          if ($materials.Count -ne 11) {
+            Write-Error "Expected 11 materials, got $($materials.Count)."
+            exit 1
+          }
+          Stop-Process -Id $process.Id -Force
+
+      - name: Report the bundle size
+        shell: bash
+        run: |
+          du -sh dist/print-engineering-optimizer | awk '{print "bundle size: " $1}'
+          {
+            echo "### ${{ matrix.label }}"
+            echo
+            echo "- bundle size: $(du -sh dist/print-engineering-optimizer | cut -f1)"
+            echo "- smoke test: started, API answered, 11 materials loaded"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/print-engineering-optimizer/
+          if-no-files-found: error
+          retention-days: 30

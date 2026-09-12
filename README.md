@@ -20,6 +20,21 @@ then says why it chose what it chose.
 
 ## Quick start
 
+Pick whichever suits you — all four run the same engine.
+
+### Portable build (no installation)
+
+Download the bundle for your platform from Actions → *Portable build* →
+Artifacts, unpack it, and run `print-engineering-optimizer`. No Python, no
+Node, no Docker: one process serves both the API and the web UI, and the
+browser opens by itself. About 250 MB unpacked.
+
+The binaries are not code signed, so Windows SmartScreen and macOS Gatekeeper
+will warn on first run — [docs/portable-build.md](docs/portable-build.md)
+covers that and everything else about this path.
+
+### Docker
+
 ```bash
 docker compose up --build
 ```
@@ -149,7 +164,7 @@ Test fixtures:
 
 ```bash
 cd backend
-PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 132 tests, ~50 s
+PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 150 tests, ~50 s
 PYTHONPATH=. ../.venv/bin/python -m pytest -m slow -s  # performance benchmark
 ```
 
@@ -255,6 +270,7 @@ intrinsic X→Y→Z in degrees, the same composition three.js applies for
 | [docs/materials.md](docs/materials.md) | Where the material numbers come from and how far to trust them |
 | [docs/orientation-engine.md](docs/orientation-engine.md) | The search, the scores, the presets, measured cost |
 | [docs/bambu-integration.md](docs/bambu-integration.md) | What Bambu Studio integration is actually possible, with sources |
+| [docs/portable-build.md](docs/portable-build.md) | The no-install bundle: using it, building it, and its limits |
 | [docs/roadmap.md](docs/roadmap.md) | What was left out and why |
 
 ## Licence and provenance
