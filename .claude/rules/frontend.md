@@ -18,5 +18,6 @@ npm ci --no-audit --no-fund   # einmalig
 npm run build                 # tsc --noEmit + vite build
 ```
 
-Browser-Gesamtprüfung (beide Server laufen, Playwright nötig):
+Browser-Gesamtprüfung aus dem Hauptverzeichnis (Backend auf 8000 und `npm run preview` auf 4173
+laufen; vorher `npm install --no-save playwright` im Hauptverzeichnis):
 `node scripts/e2e_check.mjs http://127.0.0.1:4173 test-data/bracket.stl`.

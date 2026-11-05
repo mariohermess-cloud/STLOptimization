@@ -18,13 +18,13 @@ Bestehende Namen erhalten.
 | `backend/app/`, `backend/tests/` | API, Engines (geometry, mechanics, orientation, printing, scoring), Tests | `.claude/rules/geometrie.md` |
 | `frontend/` | Oberfläche, WebGL-Viewer | `.claude/rules/frontend.md` |
 | `scripts/` | `make_test_data.py`, `analyze.py` (CLI), `e2e_check.mjs`, `dev.sh` | `geometrie.md` |
-| `desktop/`, `docker/`, `.devcontainer/` | Portable-Build (PyInstaller), Container | `geometrie.md` |
+| `desktop/`, `docker/`, `docker-compose.yml`, `.devcontainer/` | Portable-Build (PyInstaller), Container | `geometrie.md` |
 | `docs/` | Architektur, Physik, Orientierung, Materialien, Roadmap | nur gezielt lesen |
 | `test-data/` | erzeugt mit `scripts/make_test_data.py` | – |
 
 **Immer gültig:** Das Werkzeug ist **keine zertifizierte Festigkeitsberechnung**; der Hinweis
 bleibt in API, Oberfläche und Export. Einheiten mm, Lasten im STL-Koordinatensystem. Tests
-prüfen Verhältnisse, keine festen Punktzahlen. Details in `geometrie.md`.
+prüfen Verhältnisse und Grenzfälle, keine eingefangenen Punktwerte. Details in `geometrie.md`.
 
 ## Rollen
 
@@ -42,11 +42,13 @@ Die Hauptsession ist der **Chef** (Opus, in `.claude/settings.json` gesetzt; `/m
 
 ## Live (nur der Chef, nur nach ausdrücklichem OK für genau diesen Schritt)
 
-- Tag `v*` pushen (startet den Portable-Build in `portable.yml`), Releases, veröffentlichte Images.
-- Workflows von Hand starten (`analyze.yml`, `portable.yml` per `workflow_dispatch`).
+- Tag `v*` pushen (startet den Portable-Build in `portable.yml` auf drei Runnern), Releases,
+  veröffentlichte Images. `portable.yml` läuft auch bei PRs, die `desktop/`, die Abhängigkeiten oder
+  den Workflow ändern (kostet Actions-Minuten, veröffentlicht nichts).
+- Workflows von Hand starten (`ci.yml`, `analyze.yml`, `portable.yml` per `workflow_dispatch`).
 - Jeder schreibende Zugriff über ein MCP-Tool, gleich welcher Dienst; Artifact-Veröffentlichung.
-- Push, PR und Merge brauchen ein eigenes OK; die CI (`ci.yml`) prüft bei jedem Push nur und
-  veröffentlicht nichts. Merge macht Mario selbst.
+- Push, PR und Merge brauchen ein eigenes OK; die CI (`ci.yml`) läuft bei jedem Push und PR, prüft
+  nur und veröffentlicht nichts. Merge macht Mario selbst.
 
 ## Ablauf bei jedem Arbeitsauftrag
 
@@ -70,9 +72,9 @@ und entsprechen `.github/workflows/ci.yml`. Immer `git diff --check`. Bei Änder
 
 ## Große Dateien
 
-Fürs Lesen gesperrt (`permissions.deny`): `*.stl`, `*.3mf`, `node_modules/`, `frontend/dist/`,
-`build/`, `dist/`, `storage/`, `.venv/`. STL-Dateien mit `scripts/analyze.py` oder Python
-(trimesh) untersuchen, nicht lesen.
+Fürs Lesen gesperrt (`permissions.deny`): `.env*`, große erzeugte STLs (`test-data/large_*.stl`),
+`*.3mf`, `node_modules/`, `frontend/dist/`, `build/`, `dist/`, `.venv/`. Die kleinen Testteile in
+`test-data/` sind lesbar; STLs besser mit `scripts/analyze.py` oder Python (trimesh) untersuchen.
 
 ## Hooks und Skills
 
