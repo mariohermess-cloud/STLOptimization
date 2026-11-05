@@ -32,3 +32,7 @@ test-data/large_*.stl
 # PyInstaller
 /build/
 *.manifest
+
+# Claude Code (lokal)
+.claude/settings.local.json
+.claude/worktrees/

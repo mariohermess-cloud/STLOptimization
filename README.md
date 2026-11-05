@@ -164,7 +164,7 @@ Test fixtures:
 
 ```bash
 cd backend
-PYTHONPATH=. ../.venv/bin/python -m pytest -q          # 150 tests, ~50 s
+PYTHONPATH=. ../.venv/bin/python -m pytest -q          # full suite without the benchmark
 PYTHONPATH=. ../.venv/bin/python -m pytest -m slow -s  # performance benchmark
 ```
 
